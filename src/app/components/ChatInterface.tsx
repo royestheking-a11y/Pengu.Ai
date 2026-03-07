@@ -143,7 +143,7 @@ export function ChatInterface({ openCanvas }: ChatInterfaceProps) {
   const {
     messages,
     status,
-    append: sendMessage,
+    sendMessage,
     stop
   } = useChat({
     id: currentChat?.id || "new-chat",
@@ -304,7 +304,7 @@ export function ChatInterface({ openCanvas }: ChatInterfaceProps) {
       return; // Don't send to the AI chat stream
     }
 
-    sendMessage({ role: 'user', content: messageText });
+    sendMessage({ text: messageText });
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -403,7 +403,7 @@ ${transcript}
 
 Please generate the study guide now. Make it engaging, educational, and well-formatted with markdown.`;
 
-      sendMessage({ role: 'user', content: prompt });
+      sendMessage({ text: prompt });
     } catch (error: any) {
       console.error("Error fetching transcript:", error);
       showToast(error.message || "Failed to fetch YouTube transcript", "error");

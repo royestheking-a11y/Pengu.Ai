@@ -45,7 +45,7 @@ export function GuestChat({ onLogin, onSignup, onLearnMore }: GuestChatProps) {
   const {
     messages: aiMessages,
     status,
-    append: sendMessage,
+    sendMessage,
     stop
   } = useChat({
     id: guestId,
@@ -129,7 +129,7 @@ export function GuestChat({ onLogin, onSignup, onLearnMore }: GuestChatProps) {
 
     // Call the Vercel AI hook directly to hit the backend
     setInput('');
-    sendMessage({ role: 'user', content: messageText });
+    sendMessage({ text: messageText });
 
     // Show warning when 2 messages remaining (meaning length is 6, max is 10)
     if (aiMessages.length === MAX_GUEST_MESSAGES - 4) {

@@ -20,7 +20,7 @@ export function PdfChatView() {
 
     const [input, setInput] = useState("");
 
-    const { messages, status, sendMessage } = useChat({
+    const { messages, status, append: sendMessage } = useChat({
         id: currentChat?.id || "pdf-chat",
         messages: currentChat?.messages as any,
         transport: new DefaultChatTransport({
@@ -46,7 +46,7 @@ export function PdfChatView() {
 
         sendMessage({
             role: 'user',
-            parts: [{ type: 'text', text: input }]
+            content: input
         });
 
         setInput("");

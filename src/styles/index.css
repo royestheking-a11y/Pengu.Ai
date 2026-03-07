@@ -1,0 +1,489 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+/* 3D Flip Animation for Flashcards */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Slide in animation for Canvas */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out;
+}
+
+/* Pulse animation for status indicators */
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #462D28;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #5a3a34;
+}
+
+/* ── Premium Image Generation Card ─────────────────────────────── */
+@keyframes imageGenShimmer {
+  0% {
+    background-position: -600px 0;
+  }
+
+  100% {
+    background-position: 600px 0;
+  }
+}
+
+@keyframes imageGenProgress {
+  0% {
+    width: 0%;
+  }
+
+  40% {
+    width: 60%;
+  }
+
+  70% {
+    width: 80%;
+  }
+
+  90% {
+    width: 92%;
+  }
+
+  100% {
+    width: 95%;
+  }
+}
+
+@keyframes imageGenSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes imageGenFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.image-gen-card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-top: 8px;
+  font-family: inherit;
+}
+
+/* Loading */
+.image-gen-loading {
+  background: linear-gradient(135deg, #2d1a17 0%, #462D28 50%, #2d1a17 100%);
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.image-gen-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.04) 50%, transparent 100%);
+  background-size: 600px 100%;
+  animation: imageGenShimmer 2s infinite linear;
+}
+
+.image-gen-loading-inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.image-gen-icon-ring {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.image-gen-spin {
+  animation: imageGenSpin 1s linear infinite;
+  color: #d4a898;
+}
+
+.image-gen-sparkle-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: linear-gradient(135deg, #462D28, #6b3f38);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 2px 8px rgba(70, 45, 40, 0.6);
+}
+
+.image-gen-loading-title {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.image-gen-loading-prompt {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+  font-style: italic;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.image-gen-progress-bar {
+  width: 200px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.image-gen-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6b3f38, #a0584e, #d4a898);
+  border-radius: 99px;
+  animation: imageGenProgress 28s ease-out forwards;
+}
+
+/* Error */
+.image-gen-error {
+  background: #fff8f8;
+  border: 1.5px solid #fecaca;
+  padding: 16px 20px;
+}
+
+.image-gen-error-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.image-gen-error-icon {
+  color: #ef4444;
+  flex-shrink: 0;
+}
+
+.image-gen-error-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #dc2626;
+}
+
+.image-gen-error-sub {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+/* Success */
+.image-gen-success {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  animation: imageGenFadeIn 0.4s ease-out;
+}
+
+.image-gen-img-wrap {
+  position: relative;
+  aspect-ratio: 1;
+  background: #f3f4f6;
+  overflow: hidden;
+}
+
+.image-gen-img-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+}
+
+.image-gen-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.3s ease, transform 0.5s ease;
+  display: block;
+}
+
+.image-gen-img-hidden {
+  opacity: 0;
+}
+
+.image-gen-img-visible {
+  opacity: 1;
+}
+
+.image-gen-hover-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.image-gen-img-wrap:hover .image-gen-hover-overlay {
+  opacity: 1;
+}
+
+.image-gen-img-wrap:hover .image-gen-img-visible {
+  transform: scale(1.03);
+}
+
+.image-gen-hover-btn {
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.image-gen-hover-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Info overlay */
+.image-gen-info-overlay {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  padding: 14px 16px;
+  z-index: 10;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  animation: imageGenFadeIn 0.2s ease-out;
+}
+
+.image-gen-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  font-size: 13px;
+  color: #462D28;
+  margin-bottom: 10px;
+}
+
+.image-gen-info-header button {
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 2px;
+  transition: color 0.2s;
+}
+
+.image-gen-info-header button:hover {
+  color: #374151;
+}
+
+.image-gen-info-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.image-gen-info-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.image-gen-info-row span:first-child {
+  color: #6b7280;
+}
+
+.image-gen-info-row span:last-child {
+  font-weight: 600;
+  color: #374151;
+}
+
+.image-gen-info-prompt {
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* Bottom bar */
+.image-gen-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #fafafa;
+  border-top: 1px solid #f0f0f0;
+}
+
+.image-gen-bar-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.image-gen-badge {
+  background: #f3f0ff;
+  color: #7c3aed;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+  letter-spacing: 0.5px;
+}
+
+.image-gen-meta-text {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.image-gen-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.image-gen-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.image-gen-action-ghost {
+  color: #6b7280;
+  background: transparent;
+  border-color: #e5e7eb;
+}
+
+.image-gen-action-ghost:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.image-gen-action-primary {
+  background: #462D28;
+  color: white;
+  border-color: #462D28;
+}
+
+.image-gen-action-primary:hover {
+  background: #5a3a34;
+}

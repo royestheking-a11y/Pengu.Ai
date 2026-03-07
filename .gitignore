@@ -1,0 +1,39 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+server_logs.txt
+server_logs_direct.txt
+
+# Dependency directories
+node_modules/
+server/node_modules/
+
+# Build and deployment output
+dist/
+dist-ssr/
+*.local
+
+# Environment variables
+.env
+server/.env
+.env.*
+
+# Editor and OS files
+.DS_Store
+.vscode/
+.idea/
+
+# Uploads and temporary files
+uploads/
+server/uploads/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.wav
+*.mp3
+*.mp4
+*.webm

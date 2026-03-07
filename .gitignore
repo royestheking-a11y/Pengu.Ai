@@ -29,11 +29,3 @@ server/.env
 # Uploads and temporary files
 uploads/
 server/uploads/
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.wav
-*.mp3
-*.mp4
-*.webm

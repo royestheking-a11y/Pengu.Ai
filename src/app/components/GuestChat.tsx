@@ -165,8 +165,9 @@ export function GuestChat({ onLogin, onSignup, onLearnMore }: GuestChatProps) {
         return;
       }
 
-      const genId = `imggen-${Date.now()}`;
-      const userMsgId = `user-${Date.now()}`;
+      const timestamp = Date.now();
+      const genId = `imggen-${timestamp}`;
+      const userMsgId = `user-${timestamp}`;
 
       setPendingUserMessages(prev => [...prev, { id: userMsgId, content: messageText }]);
       setImageGenMessages(prev => [...prev, {

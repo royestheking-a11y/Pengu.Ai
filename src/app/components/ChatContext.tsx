@@ -39,6 +39,7 @@ interface ChatContextType {
   login: (email: string, name: string, id: string) => void;
   logout: () => void;
   updateChatId: (oldId: string, newId: string) => void;
+  setChatMessages: (chatId: string, messages: Message[]) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -271,6 +272,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const setChatMessages = (chatId: string, messages: Message[]) => {
+    setChats(prev => prev.map(chat =>
+      chat.id === chatId ? { ...chat, messages, updatedAt: Date.now() } : chat
+    ));
+  };
+
   return (
     <ChatContext.Provider value={{
       chats,
@@ -285,6 +292,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       updateChatId,
+      setChatMessages,
     }}>
       {children}
     </ChatContext.Provider>

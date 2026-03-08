@@ -102,7 +102,7 @@ export interface ImageGenMessage {
 }
 
 export function ChatInterface({ openCanvas }: ChatInterfaceProps) {
-  const { currentChat, user, updateChatId, addMessage } = useChatContext();
+  const { currentChat, user, updateChatId, addMessage, setChatMessages } = useChatContext();
   const { showToast } = useToast();
 
   const [selectedModel, setSelectedModel] = useState<"fast" | "basic" | "deep">("basic");
@@ -139,7 +139,9 @@ export function ChatInterface({ openCanvas }: ChatInterfaceProps) {
     return { ...m, content: safeContent, parts: [{ type: 'text' as const, text: safeContent }] };
   });
 
-  // Vercel AI SDK Integration
+  // Track the previous ID to detect "Real" chat switches vs "ID Upgrades"
+  const prevIdRef = useRef<string | null>(currentChat?.id || null);
+
   const {
     messages,
     status,
@@ -166,10 +168,8 @@ export function ChatInterface({ openCanvas }: ChatInterfaceProps) {
       }
     }),
     onFinish: (result: any) => {
-      // The backend already saves AI responses to MongoDB.
       console.log('[ChatInterface] AI response finished.');
       // Speak the response if voice mode is on
-      // Use the ref because onFinish is a stale closure in useChat and wouldn't see state updates
       if (voiceModeRef.current && result?.content) {
         const textContent = typeof result.content === 'string'
           ? result.content
@@ -184,6 +184,16 @@ export function ChatInterface({ openCanvas }: ChatInterfaceProps) {
       showToast("Failed to connect to AI server", "error");
     }
   });
+
+  // Sync messages from useChat back to ChatContext so transitions are stable
+  useEffect(() => {
+    if (status === 'ready' && messages.length > 0 && currentChat?.id) {
+      // Only sync if messages count actually changed or we are in a transition
+      if (currentChat.messages.length !== messages.length) {
+        setChatMessages(currentChat.id, messages as any);
+      }
+    }
+  }, [status, messages, currentChat?.id]);
 
   // Combine and sort all messages for a stable UI
   const displayMessages = useMemo(() => {
@@ -252,10 +262,23 @@ export function ChatInterface({ openCanvas }: ChatInterfaceProps) {
     setInput(e.target.value);
   };
 
-  // Clear live image gen cards and pending user messages when switching chats
+  // Clear live image gen cards and pending user messages ONLY when switching to a DIFFERENT chat
   useEffect(() => {
-    setImageGenMessages([]);
-    setPendingUserMessages([]);
+    const currentId = currentChat?.id;
+    const prevId = prevIdRef.current;
+
+    // If we switched from "new-chat" to a real MongoDB ID, DO NOT CLEAR.
+    // That's an "upgrade", not a switch.
+    const isIdUpgrade = (prevId === 'new-chat' || !prevId || prevId.length < 10) &&
+      (currentId && currentId.length >= 10);
+
+    if (currentId !== prevId && !isIdUpgrade) {
+      console.log(`[ChatInterface] Actual chat switch detected (${prevId} -> ${currentId}). Clearing synthetic state.`);
+      setImageGenMessages([]);
+      setPendingUserMessages([]);
+    }
+
+    prevIdRef.current = currentId || null;
   }, [currentChat?.id]);
 
   const isLoading = status === 'streaming' || status === 'submitted';
@@ -297,8 +320,9 @@ export function ChatInterface({ openCanvas }: ChatInterfaceProps) {
     // ── Image Generation: bypass the AI stream entirely ───────────────
     // Directly call /api/generate-image and show the premium image card.
     if (isImageGenRequest(messageText) && !pendingAttachment) {
-      const genId = `imggen-${Date.now()}`;
-      const userMsgId = `user-${Date.now()}`;
+      const timestamp = Date.now();
+      const genId = `imggen-${timestamp}`;
+      const userMsgId = `user-${timestamp}`;
 
       // 1. Show the user's message bubble immediately (before the loading card)
       setPendingUserMessages(prev => [...prev, { id: userMsgId, content: messageText }]);
@@ -679,9 +703,9 @@ Please generate the study guide now. Make it engaging, educational, and well-for
   };
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full bg-white relative overflow-hidden">
       {/* Header - ChatGPT Style */}
-      <div className="border-b border-gray-200 pl-16 pr-4 md:px-6 py-3 md:py-4 flex items-center justify-between bg-white sticky top-0 z-10">
+      <div className="border-b border-gray-200 pl-16 pr-4 md:px-6 py-3 md:py-4 flex items-center justify-between bg-white sticky top-0 z-20">
         <div className="flex items-center gap-3 truncate">
           <h2 className="text-base md:text-lg font-semibold text-gray-900 truncate">
             {currentChat?.title || "New Chat"}
@@ -729,7 +753,7 @@ Please generate the study guide now. Make it engaging, educational, and well-for
                   className="fixed inset-0 z-10"
                   onClick={() => setShowModelDropdown(false)}
                 />
-                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-20 overflow-hidden">
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-30 overflow-hidden">
                   <button
                     onClick={() => {
                       setSelectedModel("fast");
@@ -770,17 +794,17 @@ Please generate the study guide now. Make it engaging, educational, and well-for
         </div>
       </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Messages Area - Scrollable */}
+      <div className="flex-1 overflow-y-auto w-full">
         {displayMessages.length === 0 ? (
-          <EmptyState onSelectPrompt={(p) => handleInputChange({ target: { value: p } } as any)} />
+          <EmptyState onSelectPrompt={(p) => setInput(p)} />
         ) : (
           <div className="w-full">
             {displayMessages.map((message, index) => {
               if ((message as any).type === 'image-gen') {
                 const imgMsg = message as unknown as ImageGenMessage;
                 return (
-                  <div key={imgMsg.id} className="w-full border-b border-gray-100 py-4 md:py-8 bg-gray-50">
+                  <div key={imgMsg.id} className="w-full border-b border-gray-100 py-4 md:py-8 bg-gray-50 overflow-hidden">
                     <div className="max-w-3xl mx-auto px-4 md:px-6">
                       <div className="flex gap-3 md:gap-4">
                         <div className="flex-shrink-0">
@@ -788,7 +812,7 @@ Please generate the study guide now. Make it engaging, educational, and well-for
                             <img src={penguLogo} alt="Pengu" className="w-5 h-5 md:w-6 md:h-6 rounded-full" />
                           </div>
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0 max-w-full overflow-hidden">
                           <ImageOutput
                             status={imgMsg.status}
                             url={imgMsg.url}
@@ -805,7 +829,7 @@ Please generate the study guide now. Make it engaging, educational, and well-for
               if ((message as any).type === 'pending-user') {
                 const pum = message as any;
                 return (
-                  <div key={pum.id} className="w-full py-4 md:py-8 bg-white border-b border-gray-50">
+                  <div key={pum.id} className="w-full py-4 md:py-8 bg-white border-b border-gray-50 overflow-hidden">
                     <div className="max-w-3xl mx-auto px-4 md:px-6">
                       <div className="flex gap-3 md:gap-4 flex-row-reverse">
                         <div className="flex-shrink-0">
@@ -814,7 +838,7 @@ Please generate the study guide now. Make it engaging, educational, and well-for
                           </div>
                         </div>
                         <div className="flex-1 min-w-0 flex flex-col items-end">
-                          <div className="inline-block max-w-[90%] md:max-w-[85%] bg-[#F5F2F1] rounded-2xl px-3 py-2 md:px-4 md:py-3">
+                          <div className="inline-block max-w-[90%] md:max-w-[85%] bg-[#F5F2F1] rounded-2xl px-3 py-2 md:px-4 md:py-3 box-border">
                             <p className="text-sm md:text-base text-gray-900 whitespace-pre-wrap leading-relaxed m-0">{pum.content}</p>
                           </div>
                         </div>
@@ -833,11 +857,12 @@ Please generate the study guide now. Make it engaging, educational, and well-for
                 />
               );
             })}
+
             {isLoading && (
               displayMessages.length === 0 ||
               displayMessages[displayMessages.length - 1]?.role === "user"
             ) && (
-                <div className="w-full border-b border-gray-100 py-6 md:py-8">
+                <div className="w-full border-b border-gray-100 py-6 md:py-8 overflow-hidden">
                   <div className="max-w-3xl mx-auto px-4 md:px-6">
                     <div className="flex gap-3 md:gap-4">
                       <div className="flex-shrink-0">
@@ -845,7 +870,7 @@ Please generate the study guide now. Make it engaging, educational, and well-for
                           <img src={penguLogo} alt="Pengu" className="w-5 h-5 md:w-6 md:h-6 rounded-full" />
                         </div>
                       </div>
-                      <div className="flex-1 pt-1">
+                      <div className="flex-1 pt-1 text-left">
                         <div className="flex items-center gap-2">
                           <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
                           <span className="text-sm text-gray-500">Thinking...</span>
@@ -860,8 +885,8 @@ Please generate the study guide now. Make it engaging, educational, and well-for
         )}
       </div>
 
-      {/* Input Area - ChatGPT Style */}
-      <div className="border-t border-gray-200 bg-white">
+      {/* Input Area - Fixed at bottom */}
+      <div className="border-t border-gray-200 bg-white w-full">
         <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto px-2 sm:px-4 md:px-6 py-3 md:py-6">
           {isLoading && (
             <div className="mb-3 flex justify-center">
@@ -877,9 +902,9 @@ Please generate the study guide now. Make it engaging, educational, and well-for
 
           {/* Voice Recording Indicator */}
           {isRecording && (
-            <div className="flex items-center gap-2 md:gap-3 bg-red-50 border border-red-200 rounded-2xl px-3 py-2 md:px-4 md:py-3 mb-2 animate-pulse">
-              <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" />
-              <span className="text-[10px] md:text-sm font-medium text-red-700">
+            <div className="flex items-center gap-2 md:gap-3 bg-red-50 border border-red-200 rounded-2xl px-3 py-2 md:px-4 md:py-3 mb-2 animate-pulse overflow-hidden">
+              <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-ping flex-shrink-0" />
+              <span className="text-[10px] md:text-sm font-medium text-red-700 whitespace-nowrap">
                 {voiceMode ? '🎧 Listening...' : 'Recording...'}
               </span>
               {input && (
@@ -890,14 +915,14 @@ Please generate the study guide now. Make it engaging, educational, and well-for
 
           {/* Speaking Indicator */}
           {isSpeaking && (
-            <div className="flex items-center gap-2 md:gap-3 bg-purple-50 border border-purple-200 rounded-2xl px-3 py-2 md:px-4 md:py-3 mb-2">
-              <div className="flex gap-0.5 md:gap-1 items-end h-3 md:h-4">
+            <div className="flex items-center gap-2 md:gap-3 bg-purple-50 border border-purple-200 rounded-2xl px-3 py-2 md:px-4 md:py-3 mb-2 overflow-hidden">
+              <div className="flex gap-0.5 md:gap-1 items-end h-3 md:h-4 flex-shrink-0">
                 <div className="w-0.5 md:w-1 bg-purple-500 rounded-full animate-bounce" style={{ height: '6px', animationDelay: '0ms' }} />
                 <div className="w-0.5 md:w-1 bg-purple-500 rounded-full animate-bounce" style={{ height: '12px', animationDelay: '150ms' }} />
                 <div className="w-0.5 md:w-1 bg-purple-500 rounded-full animate-bounce" style={{ height: '16px', animationDelay: '100ms' }} />
               </div>
-              <span className="text-[10px] md:text-sm font-medium text-purple-700">Pengu is speaking...</span>
-              <button onClick={stopSpeaking} className="ml-auto text-[10px] md:text-xs text-purple-500 hover:text-purple-700 font-medium whitespace-nowrap">
+              <span className="text-[10px] md:text-sm font-medium text-purple-700 whitespace-nowrap">Pengu is speaking...</span>
+              <button onClick={stopSpeaking} className="ml-auto text-[10px] md:text-xs text-purple-500 hover:text-purple-700 font-medium whitespace-nowrap px-2">
                 Stop
               </button>
             </div>
@@ -905,10 +930,10 @@ Please generate the study guide now. Make it engaging, educational, and well-for
 
           {/* Pending Attachment Preview */}
           {pendingAttachment && (
-            <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-2xl px-3 py-2 mb-2">
+            <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-2xl px-3 py-2 mb-2 overflow-hidden">
               {pendingAttachment.type === 'image' ? (
                 <>
-                  <img src={pendingAttachment.url} alt="Uploaded" className="w-8 h-8 md:w-12 md:h-12 object-cover rounded-lg" />
+                  <img src={pendingAttachment.url} alt="Uploaded" className="w-8 h-8 md:w-12 md:h-12 object-cover rounded-lg flex-shrink-0" />
                   <span className="text-[10px] md:text-sm text-blue-700 flex-1 truncate">{pendingAttachment.name}</span>
                 </>
               ) : (
@@ -919,14 +944,14 @@ Please generate the study guide now. Make it engaging, educational, and well-for
               )}
               <button
                 onClick={() => setPendingAttachment(null)}
-                className="p-1 hover:bg-blue-100 rounded-full transition-colors"
+                className="p-1 hover:bg-blue-100 rounded-full transition-colors flex-shrink-0"
               >
                 <X className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-500" />
               </button>
             </div>
           )}
 
-          <div className="relative flex items-end gap-1.5 md:gap-2 bg-white border border-gray-300 rounded-3xl shadow-sm hover:shadow-md transition-shadow px-3 md:px-4 py-1.5 md:py-2">
+          <div className="relative flex items-end gap-1.5 md:gap-2 bg-white border border-gray-300 rounded-3xl shadow-sm hover:shadow-md transition-shadow px-3 md:px-4 py-1.5 md:py-2 max-w-full box-border">
             {/* Attachment Button */}
             <input
               ref={fileInputRef}
@@ -953,12 +978,12 @@ Please generate the study guide now. Make it engaging, educational, and well-for
               onKeyDown={handleKeyPress}
               placeholder="Message Pengu..."
               disabled={isLoading}
-              className="flex-1 bg-transparent resize-none outline-none text-sm md:text-base text-gray-900 placeholder:text-gray-400 disabled:opacity-50 py-1.5 md:py-2 max-h-[150px] md:max-h-[200px]"
+              className="flex-1 bg-transparent resize-none outline-none text-sm md:text-base text-gray-900 placeholder:text-gray-400 disabled:opacity-50 py-1.5 md:py-2 max-h-[150px] md:max-h-[200px] min-w-0"
               rows={1}
             />
 
             {/* Action Buttons Group */}
-            <div className="flex items-center gap-0.5 md:gap-1">
+            <div className="flex items-center gap-0.5 md:gap-1 flex-shrink-0">
               {/* Voice Mode Toggle - Hidden on xs */}
               <button
                 type="button"
@@ -1241,12 +1266,12 @@ function generateFlashcards(content: string): string {
   const cards: { front: string; back: string }[] = [];
 
   // Strategy 1: Extract from markdown headers + following content
-  const headerBlocks = content.split(/\n(?=#{1,3}\s)/);
+  const headerBlocks = content.split(/\n(?=#{1, 3}\s)/);
   for (const block of headerBlocks) {
-    const headerMatch = block.match(/^#{1,3}\s+(.+)/);
+    const headerMatch = block.match(/^#{1, 3}\s+(.+)/);
     if (headerMatch) {
       const question = headerMatch[1].replace(/[*_`]/g, '').trim();
-      const body = block.replace(/^#{1,3}\s+.+\n?/, '').trim();
+      const body = block.replace(/^#{1, 3}\s+.+\n?/, '').trim();
       if (body && body.length > 10 && question.length > 3) {
         cards.push({
           front: question.endsWith('?') ? question : `What is ${question}?`,

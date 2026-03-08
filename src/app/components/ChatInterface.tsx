@@ -269,8 +269,9 @@ export function ChatInterface({ openCanvas }: ChatInterfaceProps) {
 
     // If we switched from "new-chat" to a real MongoDB ID, DO NOT CLEAR.
     // That's an "upgrade", not a switch.
-    const isIdUpgrade = (prevId === 'new-chat' || !prevId || prevId.length < 10) &&
-      (currentId && currentId.length >= 10);
+    const isMongoId = (id: string) => /^[0-9a-fA-F]{24}$/.test(id);
+    const isIdUpgrade = (!prevId || prevId === 'new-chat' || !isMongoId(prevId)) &&
+      (currentId && isMongoId(currentId));
 
     if (currentId !== prevId && !isIdUpgrade) {
       console.log(`[ChatInterface] Actual chat switch detected (${prevId} -> ${currentId}). Clearing synthetic state.`);
@@ -357,6 +358,28 @@ export function ChatInterface({ openCanvas }: ChatInterfaceProps) {
             // so the sidebar shows it and it persists across reloads.
             if (data.sessionId) {
               const currentId = currentChat?.id;
+
+              // Force-sync messages to context so that when useChat resets with the new ID,
+              // it finds the messages already in history.
+              const syncMsgs = [
+                {
+                  id: userMsgId,
+                  role: 'user' as const,
+                  content: messageText,
+                  parts: [{ type: 'text' as const, text: messageText }],
+                  timestamp: timestamp
+                },
+                {
+                  id: genId,
+                  role: 'assistant' as const,
+                  content: `[GENERATED_IMAGE:${data.url}]`,
+                  parts: [{ type: 'text' as const, text: `[GENERATED_IMAGE:${data.url}]` }],
+                  timestamp: timestamp + 1,
+                  imageUrl: data.url
+                }
+              ];
+              setChatMessages(currentId || 'new', syncMsgs);
+
               if (!currentId || currentId !== data.sessionId) {
                 // updateChatId maps the old temp id (or null) to the real MongoDB id
                 updateChatId(currentId || 'new', data.sessionId);

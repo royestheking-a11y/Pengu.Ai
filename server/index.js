@@ -350,7 +350,7 @@ Focus on being an expert research and study assistant. Always be encouraging, cl
         // This prevents the "I can't create images" robotic refusal for plain-text queries like "hy" 
         // because Gemini models will preemptively refuse if "image generation" is in their base prompt.
         if (isImageRequest) {
-            systemPrompt += "\n\n**Image Generation**: The user has asked to generate an image. An external system (HuggingFace) is handling this. Acknowledge the request warmly and confirm it is being processed.";
+            systemPrompt += "\n\n**Image Generation**: The user has asked to generate an image. Confirm that you are creating the image for them now, and be enthusiastic about it. Keep your response brief as the image will appear automatically.";
         }
 
         // The /api/chat route only needs to handle image ANALYSIS (user uploaded an image).

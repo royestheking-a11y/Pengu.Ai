@@ -23,6 +23,23 @@ interface GuestChatProps {
 
 const MAX_GUEST_MESSAGES = 10; // 5 user messages, 5 AI responses
 
+// Detects whether the user is asking for image generation
+const IMAGE_GEN_REGEX = /\b(generate|create|draw|make|paint|render|show me|give me)\b.*\b(image|picture|photo|illustration|drawing|art|artwork|portrait|landscape|scene|wallpaper|sketch|graphic)\b/i;
+const isImageGenRequest = (text: string) =>
+  IMAGE_GEN_REGEX.test(text) &&
+  !(/\b(analyze|analyse|describe|explain|look at|what is|what's in|tell me about|details|identify|scan|read|show me what is in)\b/i.test(text));
+
+// A synthetic message used to track live image generation state
+export interface ImageGenMessage {
+  id: string;
+  role: 'assistant';
+  isImageGen: true;
+  status: 'loading' | 'finished' | 'error';
+  prompt: string;
+  url?: string;
+  errorMessage?: string;
+}
+
 export function GuestChat({ onLogin, onSignup, onLearnMore }: GuestChatProps) {
   const { showToast } = useToast();
   // We use a stable, unique guest ID for this session so the server knows it's a guest
@@ -38,6 +55,10 @@ export function GuestChat({ onLogin, onSignup, onLearnMore }: GuestChatProps) {
 
   // Extra state to hold the fallback message that isn't handled by the AI stream
   const [fallbackMessages, setFallbackMessages] = useState<Message[]>([]);
+  // State for live image generation messages (loading/finished/error cards)
+  const [imageGenMessages, setImageGenMessages] = useState<ImageGenMessage[]>([]);
+  // User text that was sent via image gen path (not through useChat stream)
+  const [pendingUserMessages, setPendingUserMessages] = useState<Array<{ id: string, content: string }>>([]);
 
   const [input, setInput] = useState("");
   const [pendingAttachment, setPendingAttachment] = useState<{ type: 'image' | 'pdf' | 'text', url?: string, name: string, content?: string } | null>(null);
@@ -62,12 +83,24 @@ export function GuestChat({ onLogin, onSignup, onLearnMore }: GuestChatProps) {
     }
   });
 
-  // Combine real AI messages and local fallback messages
-  const allMessages = [...aiMessages, ...fallbackMessages];
+  // Combine real AI messages, local fallback messages, and live image generation messages
+  const allMessages = [...aiMessages, ...fallbackMessages, ...imageGenMessages].sort((a, b) => {
+    // Basic ID-based sorting if they were created almost at the same time
+    return (a.id > b.id) ? 1 : -1;
+  });
+
+  // Final display list including user messages sent during gen
+  const displayMessages = [...allMessages];
+  pendingUserMessages.forEach(pm => {
+    if (!displayMessages.find(m => m.id === pm.id)) {
+      displayMessages.push({ id: pm.id, role: 'user', parts: [{ type: 'text', text: pm.content }] } as any);
+    }
+  });
+  displayMessages.sort((a, b) => (a.id > b.id ? 1 : -1));
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [allMessages]);
+  }, [displayMessages]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -85,27 +118,6 @@ export function GuestChat({ onLogin, onSignup, onLearnMore }: GuestChatProps) {
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if ((!input?.trim() && !pendingAttachment) || isProcessing) return;
-
-    // Check if we reached the absolute limit
-    if (aiMessages.length >= MAX_GUEST_MESSAGES - 1) { // -1 to account for the incoming user message
-      // Push the final user message to the local arrays instead of the backend
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        role: "user",
-        parts: [{ type: "text", text: input }]
-      } as any;
-
-      const aiFallback: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        parts: [{ type: "text", text: `Great question! This is a sample response to: "${input}"\n\nSign up to access:\n• Full AI-powered responses\n• PDF upload and analysis\n• YouTube transcript extraction\n• Interactive flashcards\n• Mind map generation\n• Unlimited conversations\n\nClick "Sign up for free" to unlock all features!` }]
-      } as any;
-
-      setFallbackMessages(prev => [...prev, userMessage, aiFallback]);
-      setInput('');
-      setShowLimitModal(true);
-      return;
-    }
 
     // Build the message text, including any pending attachment
     let messageText = input?.trim() || '';
@@ -126,6 +138,74 @@ export function GuestChat({ onLogin, onSignup, onLearnMore }: GuestChatProps) {
     }
 
     if (!messageText) return;
+
+    // ── Image Generation: bypass the AI stream for guests too ─────────
+    if (isImageGenRequest(messageText) && !pendingAttachment) {
+      // Check limits first
+      if (aiMessages.length >= MAX_GUEST_MESSAGES - 1) {
+        setShowLimitModal(true);
+        return;
+      }
+
+      const genId = `imggen-${Date.now()}`;
+      const userMsgId = `user-${Date.now()}`;
+
+      setPendingUserMessages(prev => [...prev, { id: userMsgId, content: messageText }]);
+      setImageGenMessages(prev => [...prev, {
+        id: genId,
+        role: 'assistant',
+        isImageGen: true,
+        status: 'loading',
+        prompt: messageText,
+      }]);
+
+      setInput('');
+      fetch(`${API_BASE_URL}/api/generate-image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: messageText, userId: guestId, userMessage: messageText }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data?.url) {
+            setImageGenMessages(prev => prev.map(m =>
+              m.id === genId ? { ...m, status: 'finished', url: data.url } : m
+            ));
+          } else {
+            setImageGenMessages(prev => prev.map(m =>
+              m.id === genId ? { ...m, status: 'error', errorMessage: data?.error || 'Generation failed' } : m
+            ));
+          }
+        })
+        .catch(err => {
+          console.error('[ImageGen] Request failed:', err);
+          setImageGenMessages(prev => prev.map(m =>
+            m.id === genId ? { ...m, status: 'error', errorMessage: 'Network error — please try again' } : m
+          ));
+        });
+
+      return;
+    }
+
+    // Check if we reached the absolute limit for normal messages
+    if (aiMessages.length >= MAX_GUEST_MESSAGES - 1) {
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: "user",
+        parts: [{ type: "text", text: input }]
+      } as any;
+
+      const aiFallback: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        parts: [{ type: "text", text: `Great question! This is a sample response to: "${input}"\n\nSign up to access:\n• Full AI-powered responses\n• PDF upload and analysis\n• YouTube transcript extraction\n• Interactive flashcards\n• Mind map generation\n• Unlimited conversations\n\nClick "Sign up for free" to unlock all features!` }]
+      } as any;
+
+      setFallbackMessages(prev => [...prev, userMessage, aiFallback]);
+      setInput('');
+      setShowLimitModal(true);
+      return;
+    }
 
     // Call the Vercel AI hook directly to hit the backend
     setInput('');
@@ -215,7 +295,7 @@ export function GuestChat({ onLogin, onSignup, onLearnMore }: GuestChatProps) {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto">
-        {allMessages.length === 0 ? (
+        {displayMessages.length === 0 ? (
           <EmptyState onSelectPrompt={(prompt) => {
             handleInputChange({ target: { value: prompt } } as any);
             // Small delay to allow state update
@@ -226,13 +306,39 @@ export function GuestChat({ onLogin, onSignup, onLearnMore }: GuestChatProps) {
           }} />
         ) : (
           <div className="w-full">
-            {allMessages.map((message) => (
-              <MessageBubble key={message.id} message={message} />
-            ))}
+            {displayMessages.map((message) => {
+              // Handle synthetic ImageGenMessages
+              if ((message as any).isImageGen) {
+                const imgMsg = message as unknown as ImageGenMessage;
+                return (
+                  <div key={imgMsg.id} className="w-full border-b border-gray-100 py-6 md:py-8 bg-gray-50">
+                    <div className="max-w-3xl mx-auto px-4 md:px-6">
+                      <div className="flex gap-3 md:gap-4">
+                        <div className="flex-shrink-0">
+                          <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-[#462D28]/10 flex items-center justify-center">
+                            <img src={penguLogo} alt="Pengu" className="w-5 h-5 md:w-6 md:h-6 rounded-full" />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <ImageOutput
+                            status={imgMsg.status}
+                            url={imgMsg.url}
+                            prompt={imgMsg.prompt}
+                            errorMessage={imgMsg.errorMessage}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              // Normal message bubbles
+              return <MessageBubble key={message.id} message={message} />;
+            })}
             {isProcessing && (
-              allMessages.length === 0 ||
-              allMessages[allMessages.length - 1]?.role === "user" ||
-              (allMessages[allMessages.length - 1]?.role === "assistant" && !getMessageContent(allMessages[allMessages.length - 1]))
+              displayMessages.length === 0 ||
+              displayMessages[displayMessages.length - 1]?.role === "user" ||
+              (displayMessages[displayMessages.length - 1]?.role === "assistant" && !getMessageContent(displayMessages[displayMessages.length - 1]))
             ) && (
                 <div className="w-full border-b border-gray-100 py-6 md:py-8">
                   <div className="max-w-3xl mx-auto px-4 md:px-6">

@@ -786,7 +786,7 @@ Please generate the study guide now. Make it engaging, educational, and well-for
                       }`}
                   >
                     <Zap className="w-4 h-4 text-orange-500" />
-                    <span className="font-semibold text-sm text-gray-900">model 3.2</span>
+                    <span className="font-semibold text-sm text-gray-900">Essential Model</span>
                   </button>
                   <button
                     onClick={() => {
@@ -797,7 +797,7 @@ Please generate the study guide now. Make it engaging, educational, and well-for
                       }`}
                   >
                     <Zap className="w-4 h-4 text-purple-600" />
-                    <span className="font-semibold text-sm text-gray-900">model 4.2</span>
+                    <span className="font-semibold text-sm text-gray-900">Pro Model</span>
                   </button>
                   <button
                     onClick={() => {
@@ -808,7 +808,7 @@ Please generate the study guide now. Make it engaging, educational, and well-for
                       }`}
                   >
                     <Sparkles className="w-4 h-4 text-blue-600" />
-                    <span className="font-semibold text-sm text-gray-900">model 5.2</span>
+                    <span className="font-semibold text-sm text-gray-900">Research Model</span>
                   </button>
                 </div>
               </>

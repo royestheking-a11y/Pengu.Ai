@@ -101,7 +101,7 @@ export async function extractPDFText(file: File): Promise<string> {
 // When an image is uploaded, it goes to Cloudinary and the URL is sent to Gemini
 // which can natively read text, handwriting, equations, diagrams, etc.
 export async function extractImageText(file: File): Promise<string> {
-  return `[Image: ${file.name}] — Image will be analyzed by Gemini Vision for text extraction and analysis.`;
+  return `[Image: ${file.name}] — Image will be analyzed by our intelligent vision system for text extraction and analysis.`;
 }
 
 // Real YouTube transcript fetching via server API

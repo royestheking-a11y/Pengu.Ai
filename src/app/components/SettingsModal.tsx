@@ -98,41 +98,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
         {/* Content */}
         <div className="px-4 md:px-6 py-4 space-y-4">
-          {/* API Configuration */}
-          <div className="border-b border-gray-200 pb-4">
-            <h3 className="font-medium text-[#1A1A1A] mb-3">API Configuration</h3>
-            <div className="space-y-2">
-              <div>
-                <label className="text-sm text-gray-600 mb-1 block">Gemini API Key</label>
-                <input
-                  type="password"
-                  value={geminiKey}
-                  onChange={(e) => setGeminiKey(e.target.value)}
-                  placeholder="Enter your API key..."
-                  className="w-full px-3 py-2 bg-[#F5F2F1] rounded-lg outline-none focus:ring-2 focus:ring-[#462D28]"
-                />
-              </div>
-              <div>
-                <label className="text-sm text-gray-600 mb-1 block">Groq API Key</label>
-                <input
-                  type="password"
-                  value={groqKey}
-                  onChange={(e) => setGroqKey(e.target.value)}
-                  placeholder="Enter your API key..."
-                  className="w-full px-3 py-2 bg-[#F5F2F1] rounded-lg outline-none focus:ring-2 focus:ring-[#462D28]"
-                />
-              </div>
-              <button
-                onClick={handleSaveKeys}
-                className="w-full px-4 py-2 bg-[#462D28] text-white rounded-lg hover:bg-[#5a3a34] transition-colors mt-2"
-              >
-                Save API Keys
-              </button>
-              <p className="text-xs text-gray-500 mt-2">
-                API keys are stored locally in your browser for privacy.
-              </p>
-            </div>
-          </div>
+
 
           {/* Data Management */}
           <div className="border-b border-gray-200 pb-4">
@@ -167,7 +133,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <h3 className="font-medium text-[#1A1A1A] mb-2">About Pengu AI</h3>
             <p className="text-sm text-gray-600">
               Version 1.0.0 - A distraction-free study companion built for students.
-              All features are ready for API integration.
+              All features are powered by our advanced learning engine.
             </p>
           </div>
 

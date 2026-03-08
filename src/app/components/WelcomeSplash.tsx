@@ -132,8 +132,7 @@ export function WelcomeSplash() {
           <div className="pt-6 sm:pt-8 border-t border-gray-200 max-w-2xl mx-auto px-4">
             <p className="text-xs text-gray-500 text-left sm:text-center">
               <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
-              <strong>Ready for API Integration:</strong> All features are built with mock functions.
-              Connect your Gemini, Groq, or other AI APIs in Settings to enable real-time responses.
+              <strong>Distraction-Free Learning:</strong> All your study materials and focused chats are protected and synced in real-time.
             </p>
           </div>
         </div>

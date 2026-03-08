@@ -89,7 +89,7 @@ export function PdfChatView() {
             }
         } catch (error) {
             console.error(error);
-            alert("Failed to process the PDF. Please ensure backend is running and valid API keys are set.");
+            alert("Failed to process the PDF. Please ensure the file is valid and try again.");
         } finally {
             setIsUploading(false);
         }
@@ -105,7 +105,7 @@ export function PdfChatView() {
                     </div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">PDF Textbook Chat</h2>
                     <p className="text-gray-500 mb-8">
-                        Upload a massive textbook or document. Our Pinecone Vector Database will automatically chunk, index, and retrieve only the relevant paragraphs for Gemini so you never hit a token limit.
+                        Upload your textbooks, research papers, or study guides. Our intelligent indexing system will process the content so you can ask specific questions and get precise answers instantly.
                     </p>
 
                     <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 mb-6 hover:bg-gray-50 transition-colors">
@@ -157,7 +157,7 @@ export function PdfChatView() {
                     <h2 className="text-lg font-semibold text-gray-900">PDF Textbook Chat</h2>
                     <p className="text-xs text-emerald-600 tracking-wide font-medium flex items-center gap-1">
                         <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                        PINECONE INDEX: ACTIVE
+                        KNOWLEDGE BASE: READY
                     </p>
                 </div>
             </div>

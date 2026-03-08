@@ -267,16 +267,21 @@ export function ChatInterface({ openCanvas }: ChatInterfaceProps) {
     const currentId = currentChat?.id;
     const prevId = prevIdRef.current;
 
-    // If we switched from "new-chat" to a real MongoDB ID, DO NOT CLEAR.
-    // That's an "upgrade", not a switch.
-    const isMongoId = (id: string) => /^[0-9a-fA-F]{24}$/.test(id);
-    const isIdUpgrade = (!prevId || prevId === 'new-chat' || !isMongoId(prevId)) &&
-      (currentId && isMongoId(currentId));
+    // We only care about actual switches between valid IDs.
+    // If currentId is undefined, we might be in a transition — don't clear yet.
+    if (!currentId) return;
 
-    if (currentId !== prevId && !isIdUpgrade) {
-      console.log(`[ChatInterface] Actual chat switch detected (${prevId} -> ${currentId}). Clearing synthetic state.`);
-      setImageGenMessages([]);
-      setPendingUserMessages([]);
+    if (currentId !== prevId) {
+      // If we switched from "new-chat" or a temp ID to a real MongoDB ID, DO NOT CLEAR.
+      // That's an "upgrade", not a switch.
+      const isMongoId = (id: string) => /^[0-9a-fA-F]{24}$/.test(id);
+      const isIdUpgrade = (!prevId || prevId === 'new-chat' || !isMongoId(prevId)) && isMongoId(currentId);
+
+      if (!isIdUpgrade) {
+        console.log(`[ChatInterface] Actual chat switch detected (${prevId} -> ${currentId}). Clearing synthetic state.`);
+        setImageGenMessages([]);
+        setPendingUserMessages([]);
+      }
     }
 
     prevIdRef.current = currentId || null;
@@ -322,7 +327,7 @@ export function ChatInterface({ openCanvas }: ChatInterfaceProps) {
     // Directly call /api/generate-image and show the premium image card.
     if (isImageGenRequest(messageText) && !pendingAttachment) {
       const timestamp = Date.now();
-      const genId = `imggen-${timestamp}`;
+      const genId = `imggen-${timestamp + 1}`;
       const userMsgId = `user-${timestamp}`;
 
       // 1. Show the user's message bubble immediately (before the loading card)

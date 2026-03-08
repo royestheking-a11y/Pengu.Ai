@@ -83,9 +83,9 @@ export const ImageOutput: React.FC<ImageOutputProps> = ({ url, status, prompt, e
                         <button onClick={() => setShowInfo(false)}><X size={14} /></button>
                     </div>
                     <div className="image-gen-info-body">
-                        <div className="image-gen-info-row"><span>Model</span><span>FLUX.1-schnell</span></div>
+                        <div className="image-gen-info-row"><span>Render Engine</span><span>Pengu Premium Render</span></div>
                         <div className="image-gen-info-row"><span>Resolution</span><span>1024 × 1024</span></div>
-                        <div className="image-gen-info-row"><span>Format</span><span>WebP / Cloudinary</span></div>
+                        <div className="image-gen-info-row"><span>Optimization</span><span>High-Res Digital Art</span></div>
                         {prompt && <div className="image-gen-info-prompt">"{prompt}"</div>}
                     </div>
                 </div>
@@ -120,7 +120,7 @@ export const ImageOutput: React.FC<ImageOutputProps> = ({ url, status, prompt, e
             {/* Bottom bar */}
             <div className="image-gen-bar">
                 <div className="image-gen-bar-meta">
-                    <span className="image-gen-badge">FLUX.1</span>
+                    <span className="image-gen-badge">AI Render</span>
                     <span className="image-gen-meta-text">1024 × 1024</span>
                 </div>
                 <div className="image-gen-bar-actions">

@@ -166,7 +166,7 @@ export function GuestChat({ onLogin, onSignup, onLearnMore }: GuestChatProps) {
       }
 
       const timestamp = Date.now();
-      const genId = `imggen-${timestamp}`;
+      const genId = `imggen-${timestamp + 1}`;
       const userMsgId = `user-${timestamp}`;
 
       setPendingUserMessages(prev => [...prev, { id: userMsgId, content: messageText }]);

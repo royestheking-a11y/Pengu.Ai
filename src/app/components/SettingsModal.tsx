@@ -2,6 +2,7 @@ import { X, Trash2, Download, Upload, Keyboard } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "./ToastContext";
 import { SHORTCUTS } from "./KeyboardShortcuts";
+import { ConfirmationModal } from "./ConfirmationModal";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface SettingsModalProps {
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [geminiKey, setGeminiKey] = useState("");
   const [groqKey, setGroqKey] = useState("");
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const { showToast } = useToast();
 
   // Load API keys from localStorage on mount
@@ -72,12 +74,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   };
 
   const handleClearAllData = () => {
-    if (confirm("Are you sure you want to clear all chat history? This cannot be undone.")) {
-      localStorage.removeItem("pengu-chats");
-      localStorage.removeItem("pengu-current-chat-id");
-      showToast("All data cleared. Refreshing...", "info");
-      setTimeout(() => window.location.reload(), 1500);
-    }
+    setShowClearConfirm(true);
+  };
+
+  const confirmClearAllData = () => {
+    localStorage.removeItem("pengu-chats");
+    localStorage.removeItem("pengu-current-chat-id");
+    showToast("All data cleared. Refreshing...", "info");
+    setTimeout(() => window.location.reload(), 1500);
   };
 
   return (
@@ -151,6 +155,18 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </div>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={confirmClearAllData}
+        title="Clear All History"
+        message="Are you sure you want to clear all chat history? This action is permanent and cannot be undone."
+        confirmText="Clear History"
+        cancelText="Cancel"
+        type="danger"
+        icon="warning"
+      />
     </div>
   );
 }

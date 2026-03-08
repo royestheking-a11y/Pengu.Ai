@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 // Force Vite HMR reload
 import { Send, Mic, Paperclip, ChevronDown, Sparkles, Zap, Loader2, Square, FileText, MessageSquare, Brain, X } from "lucide-react";
 import { useChat, UIMessage as Message } from "@ai-sdk/react";
@@ -83,20 +83,38 @@ export function GuestChat({ onLogin, onSignup, onLearnMore }: GuestChatProps) {
     }
   });
 
-  // Combine real AI messages, local fallback messages, and live image generation messages
-  const allMessages = [...aiMessages, ...fallbackMessages, ...imageGenMessages].sort((a, b) => {
-    // Basic ID-based sorting if they were created almost at the same time
-    return (a.id > b.id) ? 1 : -1;
-  });
+  // Combine and sort messages for display
+  const displayMessages = useMemo(() => {
+    const allChatMessages = [...aiMessages, ...fallbackMessages];
+    const allMessagesWithPendingUser = [...allChatMessages, ...pendingUserMessages.map(pm => ({
+      id: pm.id,
+      role: 'user',
+      parts: [{ type: 'text', text: pm.content }]
+    }))];
 
-  // Final display list including user messages sent during gen
-  const displayMessages = [...allMessages];
-  pendingUserMessages.forEach(pm => {
-    if (!displayMessages.find(m => m.id === pm.id)) {
-      displayMessages.push({ id: pm.id, role: 'user', parts: [{ type: 'text', text: pm.content }] } as any);
-    }
-  });
-  displayMessages.sort((a, b) => (a.id > b.id ? 1 : -1));
+    // Sort logic: use timestamp suffix for synthetic IDs, and createdAt for DB messages
+    const getTimestamp = (m: any) => {
+      if (m.createdAt) return new Date(m.createdAt).getTime();
+      const parts = m.id.split('-');
+      const ts = parseInt(parts[parts.length - 1]);
+      return isNaN(ts) ? 0 : ts;
+    };
+
+    const combined = [...allMessagesWithPendingUser, ...imageGenMessages.map(img => ({
+      ...img,
+      isImageGen: true
+    }))];
+
+    return combined.sort((a, b) => {
+      const timeA = getTimestamp(a);
+      const timeB = getTimestamp(b);
+      if (timeA !== timeB) return timeA - timeB;
+      // If same time, User comes first
+      return a.role === 'user' ? -1 : 1;
+    });
+  }, [aiMessages, fallbackMessages, pendingUserMessages, imageGenMessages]);
+
+  const allMessages = displayMessages; // Restore reference for limit checks logic below
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

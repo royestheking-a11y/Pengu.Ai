@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, FormEvent, useCallback } from "react";
+import { useState, useRef, useEffect, useMemo, FormEvent, useCallback } from "react";
 import { Send, Mic, Paperclip, ChevronDown, Sparkles, Zap, Loader2, HelpCircle, Square, FileText, MessageSquare, Brain, X, Image as ImageIcon, Volume2, VolumeX, Headphones } from "lucide-react";
 import { useChat, UIMessage as Message } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
@@ -185,9 +185,60 @@ export function ChatInterface({ openCanvas }: ChatInterfaceProps) {
     }
   });
 
+  // Combine and sort all messages for a stable UI
+  const displayMessages = useMemo(() => {
+    // 1. Convert useChat messages to a common format
+    const chatMsgs = (messages || []).map(m => ({ ...m, type: 'chat' }));
+
+    // 2. Convert pending user messages
+    const pendingMsgs = pendingUserMessages.map(pum => ({
+      id: pum.id,
+      role: 'user' as const,
+      content: pum.content,
+      type: 'pending-user'
+    }));
+
+    // 3. Convert image generation status messages
+    const imgMsgs = imageGenMessages.map(img => ({
+      ...img,
+      type: 'image-gen'
+    }));
+
+    const combined = [...chatMsgs, ...pendingMsgs, ...imgMsgs];
+
+    // Deduplicate: if a message exists in 'messages' and also in 'pendingUserMessages', prefer the 'messages' one
+    // Actually, we can just sort by timestamp/id and it should work.
+    const getTimestamp = (m: any) => {
+      if (m.createdAt) return new Date(m.createdAt).getTime();
+      if (m.timestamp) return m.timestamp;
+      const parts = m.id.split('-');
+      const ts = parseInt(parts[parts.length - 1]);
+      return isNaN(ts) ? 0 : ts;
+    };
+
+    return combined.sort((a, b) => {
+      const timeA = getTimestamp(a);
+      const timeB = getTimestamp(b);
+      if (timeA !== timeB) return timeA - timeB;
+      return a.role === 'user' ? -1 : 1;
+    });
+  }, [messages, pendingUserMessages, imageGenMessages]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, pendingUserMessages, imageGenMessages]);
+  }, [displayMessages]);
+
+  // Clean up synthetic messages once they appear in the real messages history
+  useEffect(() => {
+    if (messages.length > 0 && (pendingUserMessages.length > 0 || imageGenMessages.length > 0)) {
+      // If we see an image URL in the real messages that matches one of our imageGenMessages, we can clear the local state
+      const hasImageInHistory = messages.some(m => getMessageContent(m).includes('https://res.cloudinary.com'));
+      if (hasImageInHistory) {
+        setPendingUserMessages([]);
+        setImageGenMessages([]);
+      }
+    }
+  }, [messages]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -721,63 +772,70 @@ Please generate the study guide now. Make it engaging, educational, and well-for
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto">
-        {messages.length === 0 && pendingUserMessages.length === 0 && imageGenMessages.length === 0 ? (
+        {displayMessages.length === 0 ? (
           <EmptyState onSelectPrompt={(p) => handleInputChange({ target: { value: p } } as any)} />
         ) : (
           <div className="w-full">
-            {messages.map((message, index) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                openCanvas={openCanvas}
-                isLatest={index === messages.length - 1 && pendingUserMessages.length === 0 && imageGenMessages.length === 0}
-              />
-            ))}
-            {/* User messages sent via image gen path (not through useChat) */}
-            {pendingUserMessages.map((pum) => (
-              <div key={pum.id} className="w-full py-6 md:py-8 bg-white">
-                <div className="max-w-3xl mx-auto px-4 md:px-6">
-                  <div className="flex gap-3 md:gap-4 flex-row-reverse">
-                    <div className="flex-shrink-0">
-                      <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-[#462D28] flex items-center justify-center">
-                        <span className="text-white text-sm font-semibold">U</span>
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0 flex flex-col items-end">
-                      <div className="inline-block max-w-[85%] bg-[#F5F2F1] rounded-2xl px-4 py-3">
-                        <p className="text-gray-900 whitespace-pre-wrap leading-relaxed m-0">{pum.content}</p>
+            {displayMessages.map((message, index) => {
+              if ((message as any).type === 'image-gen') {
+                const imgMsg = message as unknown as ImageGenMessage;
+                return (
+                  <div key={imgMsg.id} className="w-full border-b border-gray-100 py-4 md:py-8 bg-gray-50">
+                    <div className="max-w-3xl mx-auto px-4 md:px-6">
+                      <div className="flex gap-3 md:gap-4">
+                        <div className="flex-shrink-0">
+                          <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-[#462D28]/10 flex items-center justify-center">
+                            <img src={penguLogo} alt="Pengu" className="w-5 h-5 md:w-6 md:h-6 rounded-full" />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <ImageOutput
+                            status={imgMsg.status}
+                            url={imgMsg.url}
+                            prompt={imgMsg.prompt}
+                            errorMessage={imgMsg.errorMessage}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
-            {/* Live image generation cards (loading → finished/error) */}
-            {imageGenMessages.map((imgMsg) => (
-              <div key={imgMsg.id} className="w-full border-b border-gray-100 py-6 md:py-8">
-                <div className="max-w-3xl mx-auto px-4 md:px-6">
-                  <div className="flex gap-3 md:gap-4">
-                    <div className="flex-shrink-0">
-                      <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-[#462D28]/10 flex items-center justify-center">
-                        <img src={penguLogo} alt="Pengu" className="w-5 h-5 md:w-6 md:h-6 rounded-full" />
+                );
+              }
+
+              if ((message as any).type === 'pending-user') {
+                const pum = message as any;
+                return (
+                  <div key={pum.id} className="w-full py-4 md:py-8 bg-white border-b border-gray-50">
+                    <div className="max-w-3xl mx-auto px-4 md:px-6">
+                      <div className="flex gap-3 md:gap-4 flex-row-reverse">
+                        <div className="flex-shrink-0">
+                          <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-[#462D28] flex items-center justify-center">
+                            <span className="text-white text-xs md:text-sm font-semibold">U</span>
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col items-end">
+                          <div className="inline-block max-w-[90%] md:max-w-[85%] bg-[#F5F2F1] rounded-2xl px-3 py-2 md:px-4 md:py-3">
+                            <p className="text-sm md:text-base text-gray-900 whitespace-pre-wrap leading-relaxed m-0">{pum.content}</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex-1">
-                      <ImageOutput
-                        status={imgMsg.status}
-                        url={imgMsg.url}
-                        prompt={imgMsg.prompt}
-                        errorMessage={imgMsg.errorMessage}
-                      />
-                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                );
+              }
+
+              return (
+                <MessageBubble
+                  key={message.id}
+                  message={message as any}
+                  openCanvas={openCanvas}
+                  isLatest={index === displayMessages.length - 1}
+                />
+              );
+            })}
             {isLoading && (
-              messages.length === 0 ||
-              messages[messages.length - 1]?.role === "user" ||
-              (messages[messages.length - 1]?.role === "assistant" && !getMessageContent(messages[messages.length - 1]))
+              displayMessages.length === 0 ||
+              displayMessages[displayMessages.length - 1]?.role === "user"
             ) && (
                 <div className="w-full border-b border-gray-100 py-6 md:py-8">
                   <div className="max-w-3xl mx-auto px-4 md:px-6">
@@ -804,7 +862,7 @@ Please generate the study guide now. Make it engaging, educational, and well-for
 
       {/* Input Area - ChatGPT Style */}
       <div className="border-t border-gray-200 bg-white">
-        <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto px-4 md:px-6 py-4 md:py-6">
+        <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto px-2 sm:px-4 md:px-6 py-3 md:py-6">
           {isLoading && (
             <div className="mb-3 flex justify-center">
               <button
@@ -819,29 +877,27 @@ Please generate the study guide now. Make it engaging, educational, and well-for
 
           {/* Voice Recording Indicator */}
           {isRecording && (
-            <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 mb-2 animate-pulse">
-              <div className="w-3 h-3 bg-red-500 rounded-full animate-ping" />
-              <span className="text-sm font-medium text-red-700">
-                {voiceMode ? '🎧 Listening... Speak and I\'ll reply when you stop' : 'Recording... Click mic to stop'}
+            <div className="flex items-center gap-2 md:gap-3 bg-red-50 border border-red-200 rounded-2xl px-3 py-2 md:px-4 md:py-3 mb-2 animate-pulse">
+              <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" />
+              <span className="text-[10px] md:text-sm font-medium text-red-700">
+                {voiceMode ? '🎧 Listening...' : 'Recording...'}
               </span>
               {input && (
-                <span className="text-xs text-red-500 truncate flex-1 text-right italic">"{input}"</span>
+                <span className="text-[9px] md:text-xs text-red-500 truncate flex-1 text-right italic">"{input}"</span>
               )}
             </div>
           )}
 
           {/* Speaking Indicator */}
           {isSpeaking && (
-            <div className="flex items-center gap-3 bg-purple-50 border border-purple-200 rounded-2xl px-4 py-3 mb-2">
-              <div className="flex gap-1 items-end h-4">
-                <div className="w-1 bg-purple-500 rounded-full animate-bounce" style={{ height: '8px', animationDelay: '0ms' }} />
-                <div className="w-1 bg-purple-500 rounded-full animate-bounce" style={{ height: '14px', animationDelay: '150ms' }} />
-                <div className="w-1 bg-purple-500 rounded-full animate-bounce" style={{ height: '10px', animationDelay: '300ms' }} />
-                <div className="w-1 bg-purple-500 rounded-full animate-bounce" style={{ height: '16px', animationDelay: '100ms' }} />
-                <div className="w-1 bg-purple-500 rounded-full animate-bounce" style={{ height: '6px', animationDelay: '250ms' }} />
+            <div className="flex items-center gap-2 md:gap-3 bg-purple-50 border border-purple-200 rounded-2xl px-3 py-2 md:px-4 md:py-3 mb-2">
+              <div className="flex gap-0.5 md:gap-1 items-end h-3 md:h-4">
+                <div className="w-0.5 md:w-1 bg-purple-500 rounded-full animate-bounce" style={{ height: '6px', animationDelay: '0ms' }} />
+                <div className="w-0.5 md:w-1 bg-purple-500 rounded-full animate-bounce" style={{ height: '12px', animationDelay: '150ms' }} />
+                <div className="w-0.5 md:w-1 bg-purple-500 rounded-full animate-bounce" style={{ height: '16px', animationDelay: '100ms' }} />
               </div>
-              <span className="text-sm font-medium text-purple-700">Pengu is speaking...</span>
-              <button onClick={stopSpeaking} className="ml-auto text-xs text-purple-500 hover:text-purple-700 font-medium">
+              <span className="text-[10px] md:text-sm font-medium text-purple-700">Pengu is speaking...</span>
+              <button onClick={stopSpeaking} className="ml-auto text-[10px] md:text-xs text-purple-500 hover:text-purple-700 font-medium whitespace-nowrap">
                 Stop
               </button>
             </div>
@@ -849,29 +905,28 @@ Please generate the study guide now. Make it engaging, educational, and well-for
 
           {/* Pending Attachment Preview */}
           {pendingAttachment && (
-            <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-2xl px-4 py-2 mb-2">
+            <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-2xl px-3 py-2 mb-2">
               {pendingAttachment.type === 'image' ? (
                 <>
-                  <img src={pendingAttachment.url} alt="Uploaded" className="w-12 h-12 object-cover rounded-lg" />
-                  <span className="text-sm text-blue-700 flex-1 truncate">{pendingAttachment.name}</span>
+                  <img src={pendingAttachment.url} alt="Uploaded" className="w-8 h-8 md:w-12 md:h-12 object-cover rounded-lg" />
+                  <span className="text-[10px] md:text-sm text-blue-700 flex-1 truncate">{pendingAttachment.name}</span>
                 </>
               ) : (
                 <>
-                  <FileText className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                  <span className="text-sm text-blue-700 flex-1 truncate">{pendingAttachment.name}</span>
+                  <FileText className="w-4 h-4 md:w-5 md:h-5 text-blue-600 flex-shrink-0" />
+                  <span className="text-[10px] md:text-sm text-blue-700 flex-1 truncate">{pendingAttachment.name}</span>
                 </>
               )}
               <button
                 onClick={() => setPendingAttachment(null)}
                 className="p-1 hover:bg-blue-100 rounded-full transition-colors"
-                title="Remove attachment"
               >
-                <X className="w-4 h-4 text-blue-500" />
+                <X className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-500" />
               </button>
             </div>
           )}
 
-          <div className="relative flex items-end gap-2 bg-white border border-gray-300 rounded-3xl shadow-sm hover:shadow-md transition-shadow px-4 py-2">
+          <div className="relative flex items-end gap-1.5 md:gap-2 bg-white border border-gray-300 rounded-3xl shadow-sm hover:shadow-md transition-shadow px-3 md:px-4 py-1.5 md:py-2">
             {/* Attachment Button */}
             <input
               ref={fileInputRef}
@@ -884,10 +939,10 @@ Please generate the study guide now. Make it engaging, educational, and well-for
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isLoading}
-              className="flex-shrink-0 p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
+              className="flex-shrink-0 p-1.5 md:p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
               title="Attach PDF, Image, or Text file"
             >
-              <Paperclip className="w-5 h-5 text-gray-500" />
+              <Paperclip className="w-4.5 h-4.5 md:w-5 md:h-5 text-gray-500" />
             </button>
 
             {/* Text Input */}
@@ -898,59 +953,60 @@ Please generate the study guide now. Make it engaging, educational, and well-for
               onKeyDown={handleKeyPress}
               placeholder="Message Pengu..."
               disabled={isLoading}
-              className="flex-1 bg-transparent resize-none outline-none text-gray-900 placeholder:text-gray-400 disabled:opacity-50 py-2 max-h-[200px]"
+              className="flex-1 bg-transparent resize-none outline-none text-sm md:text-base text-gray-900 placeholder:text-gray-400 disabled:opacity-50 py-1.5 md:py-2 max-h-[150px] md:max-h-[200px]"
               rows={1}
             />
 
-            {/* Voice Mode Toggle */}
-            <button
-              type="button"
-              onClick={toggleVoiceMode}
-              className={`flex-shrink-0 p-2 rounded-lg transition-all ${voiceMode
-                ? 'bg-purple-100 text-purple-600 ring-2 ring-purple-300'
-                : 'hover:bg-gray-100 text-gray-500'
-                }`}
-              title={voiceMode ? "Turn off Walk & Study mode" : "Turn on Walk & Study mode (Pengu speaks responses)"}
-            >
-              <Headphones className="w-5 h-5" />
-            </button>
-
-            {/* Voice Input Button */}
-            <button
-              type="button"
-              onClick={handleVoiceInput}
-              disabled={isLoading}
-              className={`flex-shrink-0 p-2 rounded-lg transition-all disabled:opacity-50 disabled:hover:bg-transparent ${isRecording
-                ? 'bg-red-100 ring-2 ring-red-400 animate-pulse'
-                : voiceMode
-                  ? 'bg-purple-50 hover:bg-purple-100 text-purple-600'
-                  : 'hover:bg-gray-100'
-                }`}
-              title={isRecording ? "Stop Recording" : voiceMode ? "Speak to Pengu" : "Voice Input"}
-            >
-              <Mic className={`w-5 h-5 ${isRecording ? 'text-red-600' : voiceMode ? 'text-purple-600' : 'text-gray-500'}`} />
-            </button>
-
-            {/* Speaking Stop Button */}
-            {isSpeaking && (
+            {/* Action Buttons Group */}
+            <div className="flex items-center gap-0.5 md:gap-1">
+              {/* Voice Mode Toggle - Hidden on xs */}
               <button
                 type="button"
-                onClick={stopSpeaking}
-                className="flex-shrink-0 p-2 bg-orange-100 hover:bg-orange-200 rounded-lg transition-colors ring-2 ring-orange-300 animate-pulse"
-                title="Stop Pengu from speaking"
+                onClick={toggleVoiceMode}
+                className={`hidden xs:flex flex-shrink-0 p-1.5 md:p-2 rounded-lg transition-all ${voiceMode
+                  ? 'bg-purple-100 text-purple-600 ring-2 ring-purple-300'
+                  : 'hover:bg-gray-100 text-gray-500'
+                  }`}
+                title={voiceMode ? "Turn off Walk & Study mode" : "Turn on Walk & Study mode"}
               >
-                <VolumeX className="w-5 h-5 text-orange-600" />
+                <Headphones className="w-4.5 h-4.5 md:w-5 md:h-5" />
               </button>
-            )}
 
-            {/* Send Button */}
-            <button
-              type="submit"
-              disabled={(!input.trim() && !pendingAttachment) || isLoading}
-              className="flex-shrink-0 p-2 bg-[#462D28] hover:bg-[#5a3a34] disabled:bg-gray-200 text-white rounded-lg transition-colors disabled:cursor-not-allowed"
-            >
-              <Send className="w-5 h-5" />
-            </button>
+              {/* Voice Input Button */}
+              <button
+                type="button"
+                onClick={handleVoiceInput}
+                disabled={isLoading}
+                className={`flex-shrink-0 p-1.5 md:p-2 rounded-lg transition-all disabled:opacity-50 disabled:hover:bg-transparent ${isRecording
+                  ? 'bg-red-100 ring-2 ring-red-400'
+                  : voiceMode
+                    ? 'bg-purple-50 hover:bg-purple-100 text-purple-600'
+                    : 'hover:bg-gray-100'
+                  }`}
+              >
+                <Mic className={`w-4.5 h-4.5 md:w-5 md:h-5 ${isRecording ? 'text-red-600' : 'text-gray-500'}`} />
+              </button>
+
+              {/* Speaking Stop Button */}
+              {isSpeaking && (
+                <button
+                  type="button"
+                  onClick={stopSpeaking}
+                  className="flex-shrink-0 p-1.5 md:p-2 bg-orange-100 hover:bg-orange-200 rounded-lg transition-colors ring-2 ring-orange-300"
+                >
+                  <VolumeX className="w-4.5 h-4.5 md:w-5 md:h-5 text-orange-600" />
+                </button>
+              )}
+
+              {/* Send Button */}
+              <button
+                type="submit"
+                disabled={(!input.trim() && !pendingAttachment) || isLoading}
+                className="flex-shrink-0 p-1.5 md:p-2 bg-[#462D28] hover:bg-[#5a3a34] disabled:bg-gray-200 text-white rounded-lg transition-colors disabled:cursor-not-allowed"
+              >
+                <Send className="w-4.5 h-4.5 md:w-5 md:h-5" />
+              </button>
+            </div>
           </div>
 
           <p className="text-xs text-gray-500 text-center mt-3">
@@ -1018,22 +1074,22 @@ function EmptyState({ onSelectPrompt }: { onSelectPrompt: (prompt: string) => vo
       </p>
 
       {/* Suggestion Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 max-w-3xl w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 max-w-3xl w-full px-4">
         {suggestions.map((suggestion, index) => (
           <button
             key={index}
             onClick={() => onSelectPrompt(suggestion.prompt)}
-            className="group text-left p-4 sm:p-5 bg-white border border-gray-200 rounded-xl sm:rounded-2xl hover:bg-[#F5F2F1] hover:border-[#462D28] transition-all hover:shadow-md"
+            className="group text-left p-3.5 sm:p-5 bg-white border border-gray-200 rounded-xl sm:rounded-2xl hover:bg-[#F5F2F1] hover:border-[#462D28] transition-all hover:shadow-md"
           >
             <div className="flex items-start gap-3">
               <div className="p-1.5 sm:p-2 bg-[#462D28]/10 text-[#462D28] rounded-lg group-hover:bg-[#462D28] group-hover:text-white transition-colors flex-shrink-0">
                 {suggestion.icon}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-xs sm:text-sm text-[#462D28] mb-0.5 sm:mb-1">
+                <h3 className="font-semibold text-[11px] sm:text-xs md:text-sm text-[#462D28] mb-0.5">
                   {suggestion.title}
                 </h3>
-                <p className="text-xs text-gray-600 leading-relaxed">
+                <p className="text-[10px] md:text-xs text-gray-600 leading-tight md:leading-relaxed">
                   {suggestion.description}
                 </p>
               </div>

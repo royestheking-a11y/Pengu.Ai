@@ -652,12 +652,12 @@ app.post('/api/generate-image', async (req, res) => {
         if (!hfResponse.ok) {
             const errText = await hfResponse.text();
             console.error(`[ImageGen] HuggingFace error ${hfResponse.status}: ${errText}`);
-            return res.status(502).json({ error: `Image generation failed: ${hfResponse.status}` });
+            return res.status(502).json({ error: `Visual processing system unavailable` });
         }
 
         const arrayBuffer = await hfResponse.arrayBuffer();
         if (!arrayBuffer || arrayBuffer.byteLength < 100) {
-            return res.status(502).json({ error: 'Empty image received from HuggingFace' });
+            return res.status(502).json({ error: 'Failed to retrieve generated image' });
         }
 
         const buffer = Buffer.from(arrayBuffer);

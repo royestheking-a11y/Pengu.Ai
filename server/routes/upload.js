@@ -35,7 +35,7 @@ router.post('/', upload.single('file'), async (req, res) => {
             fs.unlinkSync(req.file.path);
         }
 
-        res.status(500).json({ error: 'Failed to upload file to Cloudinary' });
+        res.status(500).json({ error: 'System failed to store document safely. Please try again.' });
     }
 });
 

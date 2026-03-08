@@ -79,7 +79,7 @@ router.post('/', upload.single('file'), async (req, res) => {
                     },
                     {
                         role: 'assistant',
-                        content: `I have thoroughly read and embedded the textbook *${req.file.originalname}* using a Vector Database! You can now ask me any specific questions about it, and I will instantly retrieve the relevant paragraphs to construct my answer without skipping a beat. What would you like to explore?`
+                        content: `I have thoroughly read and indexed the textbook *${req.file.originalname}* using our proprietary intelligence system! You can now ask me any specific questions about it, and I will instantly retrieve the relevant sections to answer you. What would you like to explore?`
                     }
                 ]
             });
@@ -102,7 +102,7 @@ router.post('/', upload.single('file'), async (req, res) => {
                 });
                 existingSession.messages.push({
                     role: 'assistant',
-                    content: `I have thoroughly read and embedded the textbook *${req.file.originalname}* using a Vector Database! What would you like to explore?`
+                    content: `I have thoroughly read and indexed the textbook *${req.file.originalname}* using our proprietary intelligence system! What would you like to explore?`
                 });
                 await existingSession.save();
             }
@@ -122,7 +122,7 @@ router.post('/', upload.single('file'), async (req, res) => {
             fs.unlinkSync(req.file.path);
         }
 
-        res.status(500).json({ error: 'Failed to upload and vectorize document', details: error.message });
+        res.status(500).json({ error: 'Intelligent Indexing failed. Please check the file format.' });
     }
 });
 

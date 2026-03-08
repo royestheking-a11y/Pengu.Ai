@@ -541,6 +541,11 @@ Focus on being an expert research and study assistant. Always be encouraging, cl
         }
 
         try {
+            // Fix: Add headers to prevent proxy buffering (Vercel Edge/Render NGINX)
+            res.setHeader('Connection', 'keep-alive');
+            res.setHeader('Cache-Control', 'no-cache, no-transform');
+            res.setHeader('X-Accel-Buffering', 'no');
+
             // Stream response back to client using the officially supported v6 UI Message protocol
             console.log('[Chat] Stream started and piping to response.');
             result.pipeUIMessageStreamToResponse(res);
@@ -549,6 +554,11 @@ Focus on being an expert research and study assistant. Always be encouraging, cl
             console.error('[Chat] Stream pipe error, attempting plain-text fallback:', streamError?.message);
             if (!res.headersSent) {
                 try {
+                    // Fix: Apply same proxy headers for fallback
+                    res.setHeader('Connection', 'keep-alive');
+                    res.setHeader('Cache-Control', 'no-cache, no-transform');
+                    res.setHeader('X-Accel-Buffering', 'no');
+
                     const fallback = await streamText({
                         model: groqChat('llama-3.3-70b-versatile'),
                         messages: processedMessages,
@@ -583,6 +593,11 @@ Focus on being an expert research and study assistant. Always be encouraging, cl
         if ((isGeminiFail || isToolCallError) && !res.headersSent) {
             console.error(`[Chat] Primary model failed (${error?.message?.substring(0, 80)}), falling back to Groq...`);
             try {
+                // Fix: Apply proxy headers here too
+                res.setHeader('Connection', 'keep-alive');
+                res.setHeader('Cache-Control', 'no-cache, no-transform');
+                res.setHeader('X-Accel-Buffering', 'no');
+
                 const fallback = await streamText({
                     model: groqChat('llama-3.3-70b-versatile'),
                     messages: processedMessages,

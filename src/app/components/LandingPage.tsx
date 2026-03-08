@@ -12,17 +12,18 @@ export function LandingPage({ onStart }: LandingPageProps) {
       <nav className="relative z-10 bg-white/95 backdrop-blur-md border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#462D28] to-[#5a3a34] flex items-center justify-center">
-                <img src={penguLogo} alt="Pengu AI" className="w-8 h-8 rounded-full object-cover" />
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-[#462D28] to-[#5a3a34] flex items-center justify-center flex-shrink-0">
+                <img src={penguLogo} alt="Pengu AI" className="w-7 h-7 md:w-8 md:h-8 rounded-full object-cover" />
               </div>
-              <span className="text-xl font-bold text-[#462D28]">Pengu AI</span>
+              <span className="text-lg md:text-xl font-bold text-[#462D28] hidden xs:block">Pengu AI</span>
             </div>
             <button
               onClick={onStart}
-              className="px-6 py-2 bg-[#462D28] text-white rounded-full hover:bg-[#5a3a34] transition-all font-semibold shadow-lg hover:shadow-xl"
+              className="px-4 sm:px-6 py-2 bg-[#462D28] text-white rounded-full hover:bg-[#5a3a34] transition-all font-semibold shadow-lg hover:shadow-xl text-sm sm:text-base whitespace-nowrap"
             >
-              Get Started Free
+              <span className="hidden xs:inline">Get Started Free</span>
+              <span className="xs:hidden">Get Started</span>
             </button>
           </div>
         </div>

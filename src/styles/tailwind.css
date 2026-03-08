@@ -1,4 +1,8 @@
 @import 'tailwindcss' source(none);
 @source '../**/*.{js,ts,jsx,tsx}';
 
+@theme {
+    --breakpoint-xs: 400px;
+}
+
 @import 'tw-animate-css';

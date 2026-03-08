@@ -205,11 +205,11 @@ export function GuestChat({ onLogin, onSignup, onLearnMore }: GuestChatProps) {
       <GuestHeader onLogin={onLogin} onSignup={onSignup} onHelp={() => setShowGuide(true)} />
 
       {/* Disclaimer Banner */}
-      <div className="bg-gray-900 text-white px-4 py-3 text-center text-sm">
-        <p>
+      <div className="bg-gray-900 text-white px-4 py-2 text-center text-[10px] sm:text-xs">
+        <p className="max-w-xl mx-auto opacity-90 leading-tight">
           By messaging Pengu AI, you agree to our Terms and Privacy Policy.
           Chats may be reviewed. {" "}
-          <button onClick={onLearnMore} className="underline hover:text-gray-300">Learn more</button>
+          <button onClick={onLearnMore} className="underline hover:text-gray-300 font-medium">Learn more</button>
         </p>
       </div>
 
@@ -427,43 +427,43 @@ function EmptyState({ onSelectPrompt }: { onSelectPrompt: (prompt: string) => vo
   ];
 
   return (
-    <div className="flex flex-col items-center justify-center h-full px-4 py-6 sm:py-8 md:py-12">
-      <div className="mb-6 sm:mb-8">
+    <div className="flex flex-col items-center justify-center min-h-[50vh] px-4 py-4 sm:py-8 md:py-12">
+      <div className="mb-4 sm:mb-8 scale-90 sm:scale-100">
         <div className="relative">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-[#462D28] flex items-center justify-center shadow-lg">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full bg-white shadow-inner flex items-center justify-center">
-              <img src={penguLogo} alt="Pengu AI" className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full object-cover" />
+          <div className="w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-[#462D28] flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full bg-white shadow-inner flex items-center justify-center">
+              <img src={penguLogo} alt="Pengu AI" className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full object-cover" />
             </div>
           </div>
-          <div className="absolute -bottom-0.5 -right-0.5 w-6 h-6 bg-[#462D28] rounded-full flex items-center justify-center shadow-md">
-            <Sparkles className="w-4 h-4 text-white" />
+          <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 sm:w-6 sm:h-6 bg-[#462D28] rounded-full flex items-center justify-center shadow-md">
+            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
           </div>
         </div>
       </div>
 
-      <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#462D28] mb-2 text-center px-4">
+      <h2 className="text-lg sm:text-2xl md:text-3xl font-bold text-[#462D28] mb-1.5 text-center px-4 leading-tight">
         What can I help you study?
       </h2>
-      <p className="text-xs sm:text-sm text-gray-600 mb-6 max-w-md text-center px-4">
+      <p className="text-[10px] sm:text-sm text-gray-600 mb-6 max-w-sm text-center px-4">
         Try Pengu AI for free - no account needed
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 max-w-3xl w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 md:gap-4 max-w-3xl w-full">
         {suggestions.map((suggestion, index) => (
           <button
             key={index}
             onClick={() => onSelectPrompt(suggestion.prompt)}
-            className="group text-left p-4 sm:p-5 bg-white border border-gray-200 rounded-xl sm:rounded-2xl hover:bg-[#F5F2F1] hover:border-[#462D28] transition-all hover:shadow-md"
+            className="group text-left p-3 sm:p-5 bg-white border border-gray-200 rounded-xl sm:rounded-2xl hover:bg-[#F5F2F1] hover:border-[#462D28] transition-all hover:shadow-md"
           >
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-2.5 sm:gap-3">
               <div className="p-1.5 sm:p-2 bg-[#462D28]/10 text-[#462D28] rounded-lg group-hover:bg-[#462D28] group-hover:text-white transition-colors flex-shrink-0">
                 {suggestion.icon}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-xs sm:text-sm text-[#462D28] mb-0.5 sm:mb-1">
+                <h3 className="font-semibold text-[11px] sm:text-sm text-[#462D28] mb-0.5 sm:mb-1">
                   {suggestion.title}
                 </h3>
-                <p className="text-xs text-gray-600 leading-relaxed">
+                <p className="text-[10px] sm:text-xs text-gray-600 leading-relaxed line-clamp-2">
                   {suggestion.description}
                 </p>
               </div>
